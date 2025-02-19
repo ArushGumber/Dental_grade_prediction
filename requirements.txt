@@ -4,3 +4,4 @@ numpy
 fpdf
 seaborn
 matplotlib
+openpyxl
