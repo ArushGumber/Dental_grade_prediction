@@ -4,6 +4,9 @@ import numpy as np
 import io
 from fpdf import FPDF 
 import base64
+import seaborn as sns
+import matplotlib.pyplot as plt
+import tempfile
 
 st.set_page_config(
     page_title="IOTN Prediction App",
@@ -384,6 +387,57 @@ def individual_patient_page():
             file_name="IOTN_Prediction_Report.pdf",
             mime="application/pdf"
         )
+        # import openai
+        # openai.api_key = " "
+
+        def generate_dental_report(patient_data, predicted_grade):
+            prompt = f"""
+        Generate a detailed dental report for the following patient details:
+        Patient ID: {patient_data['sample']}
+        Age: {patient_data['age']}
+        Sex: {"Male" if patient_data['sex'] == 0 else "Female"}
+        Cleft lip/palate: {"Yes" if patient_data['cleft'] else "No"}
+        Hypodontia: {"Yes" if patient_data['hypdonta'] else "No"}
+        Overjet: {patient_data['overjet']} mm
+        Reverse Overjet: {patient_data['reverseoverjet']} mm
+        Crossbite: {patient_data['crossbite']} mm
+        Displacement: {patient_data['displacement']} mm
+        Openbite: {patient_data['openbite']} mm
+        Overbite: {patient_data['overbite']} mm
+
+        The predicted IOTN Grade is {predicted_grade}.
+
+        Please write a comprehensive dental report that explains the significance of these measurements, discusses the severity of the malocclusion based on the IOTN system, and provides clear recommendations for further consultation or treatment.
+        """
+            # response = openai.ChatCompletion.create(
+            #     model="gpt-3.5-turbo",
+            #     messages=[
+            #     {"role": "system", "content": "You are a dental expert generating comprehensive and detailed dental reports."},
+            #     {"role": "user", "content": prompt}
+            #     ],
+            #     max_tokens=500,
+            #     temperature=0.7,
+            # )
+            # report_text = response['choices'][0]['message']['content'].strip()
+            # return report_text
+
+        # patient_data = {
+        #     "sample": sample,
+        #     "age": age,
+        #     "sex": sex,
+        #     "cleft": cleft,
+        #     "hypdonta": hypdonta,
+        #     "overjet": overjet,
+        #     "reverseoverjet": reverseoverjet,
+        #     "crossbite": crossbite,
+        #     "displacement": displacement,
+        #     "openbite": openbite,
+        #     "overbite": overbite
+        # }
+        # report = generate_dental_report(patient_data, predicted_grade)
+        # st.write(report)
+
+
 def eda_page():
     st.header("Exploratory Data Analysis and Bias Check")
     st.write("Upload a CSV file containing patient records for EDA and bias analysis. "
@@ -411,49 +465,55 @@ def eda_page():
         
         st.subheader("Data with Predicted Grades")
         st.dataframe(df)
-        
-        import matplotlib.pyplot as plt
-        import seaborn as sns
+        small_figsize = (5, 3)
         sns.set(style="whitegrid")
-
-        fig1, ax1 = plt.subplots()
+        
+        # plot 1 gender distribution piechart
+        fig1, ax1 = plt.subplots(figsize=(small_figsize))
         gender_counts = df["Sex"].value_counts().sort_index()
         labels = ["Male" if x == 0 else "Female" for x in gender_counts.index]
         ax1.pie(gender_counts, labels=labels, autopct='%1.1f%%', startangle=90,
                 colors=sns.color_palette("pastel"))
-        ax1.set_title("Gender Distribution")
+        ax1.set_title("Gender Distribution", fontsize=10)
         st.pyplot(fig1)
-
-        fig2, ax2 = plt.subplots()
+        
+        # plt 2 age distribution histogram
+        fig2, ax2 = plt.subplots(figsize=(small_figsize))
         ax2.hist(df["Age"], bins=10, color="skyblue", edgecolor="black")
-        ax2.set_xlabel("Age")
-        ax2.set_ylabel("Frequency")
-        ax2.set_title("Age Distribution")
+        ax2.set_xlabel("Age", fontsize=9)
+        ax2.set_ylabel("Frequency", fontsize=9)
+        ax2.set_title("Age Distribution", fontsize=10)
         st.pyplot(fig2)
-        fig3, ax3 = plt.subplots()
+        
+        # plot 3 predicted grade distribution Barchart
+        fig3, ax3 = plt.subplots(figsize=(small_figsize))
         grade_counts = df["Predicted Grade"].value_counts().sort_index()
         ax3.bar(grade_counts.index.astype(str), grade_counts.values, color="lightgreen", edgecolor="black")
-        ax3.set_xlabel("Predicted Grade")
-        ax3.set_ylabel("Count")
-        ax3.set_title("Predicted Grade Distribution")
+        ax3.set_xlabel("Predicted Grade", fontsize=9)
+        ax3.set_ylabel("Count", fontsize=9)
+        ax3.set_title("Predicted Grade Distribution", fontsize=10)
         st.pyplot(fig3)
-        fig4, ax4 = plt.subplots(figsize=(8, 6))
+        
+        # Plot5 gender distribution across predicted grades grouped bar
+        fig4, ax4 = plt.subplots(figsize=(6, 4))
         grade_gender = pd.crosstab(df["Predicted Grade"], df["Sex"])
         grade_gender.columns = ["Male", "Female"]
         grade_gender.plot(kind="bar", ax=ax4, color=["steelblue", "salmon"])
-        ax4.set_title("Gender Distribution across Predicted Grades")
-        ax4.set_xlabel("Predicted Grade")
-        ax4.set_ylabel("Count")
+        ax4.set_title("Gender across Predicted Grades", fontsize=10)
+        ax4.set_xlabel("Predicted Grade", fontsize=9)
+        ax4.set_ylabel("Count", fontsize=9)
         st.pyplot(fig4)
         
-        fig5, ax5 = plt.subplots(figsize=(8, 6))
+        # plt 5 age distribution across predicted grades
+        fig5, ax5 = plt.subplots(figsize=(6, 4))
         sns.boxplot(x="Predicted Grade", y="Age", data=df, ax=ax5, palette="pastel")
-        ax5.set_title("Age Distribution across Predicted Grades")
+        ax5.set_title("Age vs Predicted Grade", fontsize=10)
         st.pyplot(fig5)
         
-        fig6, ax6 = plt.subplots(figsize=(8, 6))
+        # plot 6 scatter plot Age vs Predicted Grade 
+        fig6, ax6 = plt.subplots(figsize=(6, 4))
         sns.scatterplot(data=df, x="Age", y="Predicted Grade", hue="Sex", palette="Set1", ax=ax6)
-        ax6.set_title("Scatter Plot: Age vs Predicted Grade")
+        ax6.set_title("Scatter: Age vs Predicted Grade", fontsize=10)
         st.pyplot(fig6)
         
         st.subheader("Group-wise Aggregated EDA Summary")
@@ -472,6 +532,50 @@ def eda_page():
             file_name="group_wise_eda_summary.csv",
             mime="text/csv"
         )
+        
+        #pdf
+        if st.button("Generate EDA PDF Report"):
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", "B", 16)
+            pdf.cell(0, 10, "EDA & Bias Analysis Report", ln=True, align="C")
+            pdf.ln(5)
+
+            pdf.set_font("Arial", "", 12)
+            pdf.multi_cell(0, 10, "This report provides an exploratory data analysis (EDA) and bias check for the patient records. "
+                                    "It includes distribution plots for gender, age, and predicted grades, as well as a group-wise aggregated summary.")
+            pdf.ln(5)
+            plots = [("Gender Distribution", fig1),
+                     ("Age Distribution", fig2),
+                     ("Predicted Grade Distribution", fig3),
+                     ("Gender across Predicted Grades", fig4),
+                     ("Age vs Predicted Grade (Box Plot)", fig5),
+                     ("Scatter: Age vs Predicted Grade", fig6)]
+            
+            for title, fig in plots:
+                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmpfile:
+                    fig.savefig(tmpfile.name, bbox_inches="tight")
+                    pdf.set_font("Arial", "B", 12)
+                    pdf.cell(0, 10, title, ln=True)
+                    pdf.image(tmpfile.name, x=10, w=pdf.w - 20)
+                    pdf.ln(5)
+            
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 10, "Group-wise Aggregated Summary:", ln=True)
+            pdf.set_font("Arial", "", 10)
+            for index, row in eda_summary.iterrows():
+                line = f"Grade {row['Predicted Grade']}: Count = {row['count']}, Mean Age = {row['mean_age']:.1f}, Male = {row['male_count']}, Female = {row['female_count']}"
+                pdf.cell(0, 10, line, ln=True)
+            
+            pdf_bytes = pdf.output(dest='S').encode('latin-1')
+            st.download_button(
+                label="Download EDA PDF Report",
+                data=pdf_bytes,
+                file_name="EDA_Bias_Analysis_Report.pdf",
+                mime="application/pdf"
+            )
+
+        
 
 
 
